@@ -1,6 +1,3 @@
-const zsodium = @import("zsodium.zig");
-const mem = zsodium.mem;
-
 const std = @import("std");
 const assert = std.debug.assert;
 const memset = std.mem.set;
@@ -9,11 +6,15 @@ const fs = @import("std").fs;
 const OpenFlags = fs.File.OpenFlags;
 
 // **** INITIALIZATION ****
+const zsodium = @import("zsodium.zig");
+
 test "sodium_init happy path" {
     try zsodium.init();
 }
 
 // **** MEMORY ****
+const mem = zsodium.mem;
+
 test "alloc and leak" {
     const am = try mem.alloc(u8, 32);
 

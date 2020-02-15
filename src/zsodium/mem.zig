@@ -35,8 +35,12 @@ pub fn alloc(comptime T: type, len: usize) ![]T {
 /// It provides the same guarantees as mem.alloc() but also protects against
 /// arithmetic overflows when count * size exceeds SIZE_MAX.
 pub fn allocArray(comptime T: type, len: usize) ![]T {
+    // Same sanity check as above.
+    const alen = @sizeOf(T) * len;
+    assert(alen % @alignOf(T) == 0);
+
     // TODO?: Enforce size_max in Zig.
-    const am = @ptrCast([*c]T, nacl.sodium_allocarray(len, @sizeOf(T)));
+    const am = @ptrCast([*c]T, @alignCast(@alignOf(T), nacl.sodium_allocarray(len, @sizeOf(T))));
     if (os.errno(@ptrToInt(am)) != 0)
         return SodiumError.AllocError;
 

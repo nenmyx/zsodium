@@ -46,8 +46,8 @@ test "lock/unlock allocated memory" {
 test "lock/unlock pre-allocated memory" {
     var am = [_]u8{ 1, 1, 2, 3, 5, 8 };
 
-    try mem.lock(u8, am[0..am.len]);
-    try mem.unlock(u8, am[0..am.len]);
+    try mem.lock(u8, am[0..]);
+    try mem.unlock(u8, am[0..]);
 }
 
 test "constant time comparison of same types" {
@@ -93,9 +93,9 @@ test "zero allocated memory" {
 test "zero pre-allocated memory" {
     var m = [_]u16{ 1, 1, 2, 3, 5, 8 };
     var z = [_]u16{ 0, 0, 0, 0, 0, 0 };
-    mem.zero(u16, m[0..m.len]);
+    mem.zero(u16, m[0..]);
 
-    assert(mem.eql(u16, m[0..m.len], z[0..z.len]));
+    assert(mem.eql(u16, m[0..], z[0..]));
 }
 
 test "allocator used as an allocator" {

@@ -5,7 +5,7 @@
 
 // All tests are in this file since otherwise the compiler just ignores imports.
 
-const SodiumError = @import("zsodium/util.zig").SodiumError;
+pub const SodiumError = @import("zsodium/util.zig").SodiumError;
 const nacl = @import("zsodium/c.zig");
 
 /// Initializes libsodium for use within the application, if initialization failes,

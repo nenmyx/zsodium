@@ -26,6 +26,7 @@ pub fn alloc(comptime T: type, len: usize) ![]T {
     assert(alen % @alignOf(T) == 0);
 
     const am = @ptrCast([*c]T, @alignCast(@alignOf(T), nacl.sodium_malloc(alen)));
+    // TODO: Error based on errno, instead of something generic.
     if (os.errno(@ptrToInt(am)) != 0)
         return SodiumError.AllocError;
 
@@ -41,6 +42,7 @@ pub fn allocArray(comptime T: type, len: usize) ![]T {
 
     // TODO?: Enforce size_max in Zig.
     const am = @ptrCast([*c]T, @alignCast(@alignOf(T), nacl.sodium_allocarray(len, @sizeOf(T))));
+    // TODO: Error based on errno, instead of something generic.
     if (os.errno(@ptrToInt(am)) != 0)
         return SodiumError.AllocError;
 
@@ -66,6 +68,7 @@ pub fn zero(comptime T: type, buf: []T) void {
 /// Used to ensure critical memory (like cryptographic keys) can remain
 /// in memory and not ever sent to a more persistent storage medium.
 pub fn lock(comptime T: type, buf: []T) !void {
+    // TODO: Error based on errno, instead of something generic.
     if (nacl.sodium_mlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
         return SodiumError.LockError;
 }
@@ -73,6 +76,7 @@ pub fn lock(comptime T: type, buf: []T) !void {
 /// Unlocks the specified region of memory, to tell the kernel it can be
 /// sent to swap safely.
 pub fn unlock(comptime T: type, buf: []T) !void {
+    // TODO: Error based on errno, instead of something generic.
     if (nacl.sodium_munlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
         return SodiumError.LockError;
 }

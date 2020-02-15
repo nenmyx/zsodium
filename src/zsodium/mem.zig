@@ -103,11 +103,16 @@ pub fn eql(comptime T: type, mema: []const T, memb: []const T) bool {
     return nacl.sodium_memcmp(mema.ptr, memb.ptr, math.min(mema.len, memb.len)) == 0;
 }
 
-// Create an allocator that uses libsodium's functions
+// Below is the allocation functions for sodium_allocator, as well as sodium_allocator
+// itself. These are not intended to be used in any other context.
+
+/// The primary alloc/realloc/free function for use with the Allocator.
+/// We will not change or check with mprotect, as it is not the job of this function
+/// to guarantee memory security, and it would be setting it implicitly which would
+/// allow for certain security vulnerabilities to exist. Instead, we will assume that
+/// all memory is read/write, and segfault if not. If critical memory is going through
+/// this function, it should be set to read/write before handled.
 fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize, new_align: u29) Allocator.Error![]u8 {
-    // We will not check the mprotect status, as it is not the job of this function
-    // to guarantee memory security, and we would be setting it implicitly which would
-    // allow for certain security vulnerabilities to exit.
     // TODO: See if realigning to the page is necessary, since libsodium will always use the
     // end of the page anyway.
     const new_mem = alloc(u8, new_size) catch @panic("unable to allocate memory using sodium_malloc");
@@ -128,10 +133,13 @@ fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize
     return new_mem;
 }
 
+/// A small wrapper around realloc().
 fn shrink(a: *Allocator, old_mem: []u8, old_align: u29, new_size: usize, new_align: u29) []u8 {
     return realloc(a, old_mem, old_align, new_size, new_align) catch unreachable;
 }
 
+/// Zig Allocator using libsodium allocation and free functions,
+/// for use with standard Zig libraries and functions.
 pub const sodium_allocator = &Allocator{
     .reallocFn = realloc,
     .shrinkFn = shrink,

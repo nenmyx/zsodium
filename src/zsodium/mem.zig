@@ -116,10 +116,11 @@ fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize
 
     if (old_mem.len > new_size) {
         mem.copy(u8, new_mem, old_mem[0..new_size]);
-    } else {
+    } else if (new_mem.len > 0) {
         mem.copy(u8, new_mem, old_mem);
     }
 
+    free(old_mem);
     return new_mem;
 }
 

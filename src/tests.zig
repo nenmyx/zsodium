@@ -99,5 +99,6 @@ test "allocator used as an allocator" {
     const correct = "hello!";
     assert(mem.eql(u8, data, correct[0..]));
 
+    mem.sodium_allocator.free(data);
     f.close();
 }

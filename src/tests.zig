@@ -77,7 +77,6 @@ test "contant time comparison not equal" {
     const bm = try mem.alloc(u64, 1);
     am[0] = 0x00;
 
-    // Kinda dumb but casting down is always the safer bet.
     assert(!mem.eql(u64, am, bm));
 }
 

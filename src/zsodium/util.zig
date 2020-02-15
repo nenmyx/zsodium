@@ -1,6 +1,6 @@
 pub const SodiumError = error{
     InitError,
     AllocError,
-    LockLimitError,
+    LockError,
     MProtectError,
 };

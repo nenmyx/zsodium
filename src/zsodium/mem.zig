@@ -65,16 +65,16 @@ pub fn zero(comptime T: type, buf: []T) void {
 /// Locks the specified region of memory to avoid it being moved to swap.
 /// Used to ensure critical memory (like cryptographic keys) can remain
 /// in memory and not ever sent to a more persistent storage medium.
-pub fn lock(comptime T: type, buf: []T, len: usize) !void {
-    if (nacl.sodium_mlock(@as(*c_void, buf.ptr), @sizeOf(T) * len) < 0)
-        return SodiumError.LockLimitError;
+pub fn lock(comptime T: type, buf: []T) !void {
+    if (nacl.sodium_mlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
+        return SodiumError.LockError;
 }
 
 /// Unlocks the specified region of memory, to tell the kernel it can be
 /// sent to swap safely.
-pub fn unlock(comptime T: type, buf: []T, len: usize) void {
-    // TODO: Figure out if this is an error return value or not.
-    _ = nacl.sodium_munlock(@as(*c_void, buf.ptr), @sizeOf(T) * len);
+pub fn unlock(comptime T: type, buf: []T) !void {
+    if (nacl.sodium_munlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
+        return SodiumError.LockError;
 }
 
 /// Ease of use function to use mprotect() to specify to the kernel that

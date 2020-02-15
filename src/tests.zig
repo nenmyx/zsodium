@@ -39,8 +39,15 @@ test "lock/unlock allocated memory" {
     const am = try mem.alloc(u16, 16);
     defer mem.free(am);
 
-    try mem.lock(u16, am, 16);
-    mem.unlock(u16, am, 16);
+    try mem.lock(u16, am);
+    try mem.unlock(u16, am);
+}
+
+test "lock/unlock pre-allocated memory" {
+    var am = [_]u8{ 1, 1, 2, 3, 5, 8 };
+
+    try mem.lock(u8, am[0..am.len]);
+    try mem.unlock(u8, am[0..am.len]);
 }
 
 test "constant time comparison of same types" {

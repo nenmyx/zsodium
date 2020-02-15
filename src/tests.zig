@@ -69,7 +69,6 @@ test "constant time comparison of higher alignment types" {
     const am = try mem.alloc(u64, 24);
     const bm = try mem.alloc(u64, 32);
 
-    // Kinda dumb but casting down is always the safer bet.
     assert(mem.eql(u64, am, bm));
 }
 

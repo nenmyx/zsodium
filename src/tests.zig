@@ -97,6 +97,16 @@ test "zero pre-allocated memory" {
     assert(mem.eql(u16, m[0..], z[0..]));
 }
 
+test "memory is zero" {
+    const z = [_]u16{ 0, 0, 0, 0, 0, 0 };
+    assert(mem.isZero(z[0..]));
+}
+
+test "memory is not zero" {
+    const m = [_]u16{ 1, 1, 2, 3, 5, 8 };
+    assert(!mem.isZero(m[0..]));
+}
+
 test "allocator used as an allocator" {
     const f = try fs.cwd().openFile("test/hello.txt", OpenFlags{ .read = true, .write = false });
     const fstream = &f.inStream().stream;
@@ -136,16 +146,60 @@ test "allocator realloc smaller" {
 // **** ENCODING/DECODING ****
 const enc = zsodium.enc;
 
-test "bin to hex representation" {
-    const am = try mem.alloc(u8, 1);
-    const hex = try enc.toHex(mem.sodium_allocator, u8, am);
+test "bin to/from hex u8" {
+    const am = [_]u8{ 1, 3, 3, 7 };
+    const hex = try enc.toHex(mem.sodium_allocator, u8, am[0..]);
+    assert(mem.eql(u8, hex, "01030307"));
 
-    assert(mem.eql(u8, hex, "db"));
+    const rev = try enc.fromHex(mem.sodium_allocator, u8, hex, "");
+    assert(mem.eql(u8, rev, am[0..]));
 }
 
-test "hex representation to bin" {
-    const hex = "aa";
-    const bin = try enc.fromHex(mem.sodium_allocator, u8, hex, "");
+test "bin to/from hex u16" {
+    const am = [_]u16{ 1, 3, 3, 7 };
+    const hex = try enc.toHex(mem.sodium_allocator, u16, am[0..]);
+    // Just don't run the tests on a big-endian architecture, it's fine.
+    // TODO: Check for endianness and check accordingly.
+    assert(mem.eql(u8, hex, "0100030003000700"));
 
-    assert(bin[0] == 0xAA);
+    const rev = try enc.fromHex(mem.sodium_allocator, u16, hex, "");
+    assert(mem.eql(u16, rev, am[0..]));
+}
+
+test "bin to/from base64 original variant" {
+    const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
+    const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.Original);
+    assert(mem.eql(u8, b64, "qgC7AMwA3QA="));
+
+    const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.Original);
+    assert(mem.eql(u16, am[0..], rev));
+}
+
+test "bin to/from base64 original padless variant" {
+    const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
+    const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.OriginalNoPadding);
+    assert(mem.eql(u8, b64, "qgC7AMwA3QA"));
+
+    const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.OriginalNoPadding);
+    assert(mem.eql(u16, am[0..], rev));
+}
+
+// TODO: Fix the following test data to actually require url safe characters.
+
+test "bin to/from base64 url safe variant" {
+    const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
+    const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.UrlSafe);
+    assert(mem.eql(u8, b64, "qgC7AMwA3QA="));
+
+    const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.UrlSafe);
+    assert(mem.eql(u16, am[0..], rev));
+}
+
+test "bin to/from base64 url safe padless variant" {
+    const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
+    const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.UrlSafeNoPadding);
+    assert(mem.eql(u8, b64, "qgC7AMwA3QA"));
+
+    const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.UrlSafeNoPadding);
+    assert(mem.eql(u16, am[0..], rev));
 }

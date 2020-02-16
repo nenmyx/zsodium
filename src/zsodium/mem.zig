@@ -67,6 +67,14 @@ pub fn zero(buf: var) void {
     nacl.sodium_memzero(bytes.ptr, bytes.len);
 }
 
+/// Checks that the given memory is all zeroed.
+pub fn isZero(buf: var) bool {
+    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
+    const bytes = @sliceToBytes(buf);
+
+    return nacl.sodium_is_zero(bytes.ptr, bytes.len) == 1;
+}
+
 /// Locks the specified region of memory to avoid it being moved to swap.
 /// Used to ensure critical memory (like cryptographic keys) can remain
 /// in memory and not ever sent to a more persistent storage medium.

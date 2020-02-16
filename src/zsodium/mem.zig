@@ -119,7 +119,7 @@ pub fn eql(comptime T: type, mema: []const T, memb: []const T) bool {
 fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize, new_align: u29) Allocator.Error![]u8 {
     // TODO: See if realigning to the page is necessary, since libsodium will always use the
     // end of the page anyway.
-    const new_mem = alloc(u8, new_size) catch @panic("unable to allocate memory using sodium_malloc");
+    const new_mem = alloc(u8, new_size) catch return Allocator.Error.OutOfMemory;
 
     // Initialize the new memory
     zero(u8, new_mem);

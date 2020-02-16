@@ -60,24 +60,33 @@ pub fn free(buf: var) void {
 }
 
 /// Zeroes the given memory.
-pub fn zero(comptime T: type, buf: []T) void {
-    nacl.sodium_memzero(buf.ptr, @sizeOf(T) * buf.len);
+pub fn zero(buf: var) void {
+    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
+    const bytes = @sliceToBytes(buf);
+
+    nacl.sodium_memzero(bytes.ptr, bytes.len);
 }
 
 /// Locks the specified region of memory to avoid it being moved to swap.
 /// Used to ensure critical memory (like cryptographic keys) can remain
 /// in memory and not ever sent to a more persistent storage medium.
-pub fn lock(comptime T: type, buf: []T) !void {
+pub fn lock(buf: var) !void {
+    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
+    const bytes = @sliceToBytes(buf);
+
     // TODO: Error based on errno, instead of something generic.
-    if (nacl.sodium_mlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
+    if (nacl.sodium_mlock(bytes.ptr, bytes.len) != 0)
         return SodiumError.LockError;
 }
 
 /// Unlocks the specified region of memory, to tell the kernel it can be
 /// sent to swap safely.
-pub fn unlock(comptime T: type, buf: []T) !void {
+pub fn unlock(buf: var) !void {
+    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
+    const bytes = @sliceToBytes(buf);
+
     // TODO: Error based on errno, instead of something generic.
-    if (nacl.sodium_munlock(buf.ptr, @sizeOf(T) * buf.len) != 0)
+    if (nacl.sodium_munlock(bytes.ptr, bytes.len) != 0)
         return SodiumError.LockError;
 }
 
@@ -102,6 +111,8 @@ pub fn readWrite(buf: var) !void {
         return SodiumError.MProtectError;
 }
 
+// TODO: Figure out a robust way to infer types.
+
 /// Constant time memory comparison, only checks for equality.
 pub fn eql(comptime T: type, mema: []const T, memb: []const T) bool {
     return nacl.sodium_memcmp(mema.ptr, memb.ptr, math.min(mema.len, memb.len)) == 0;
@@ -121,19 +132,22 @@ fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize
     // end of the page anyway.
     const new_mem = alloc(u8, new_size) catch return Allocator.Error.OutOfMemory;
 
-    // Initialize the new memory
-    zero(u8, new_mem);
+    // TODO: Figure out where the 0xAA bytes are coming from, they seem
+    // to occur after this function, as zeroing out the bytes does nothing.
+    zero(new_mem);
+
+    // Short circuit in event of null pointer.
     if (old_mem.len == 0) {
         return new_mem;
     }
 
+    defer free(old_mem);
     if (old_mem.len > new_size) {
         mem.copy(u8, new_mem, old_mem[0..new_size]);
     } else if (new_mem.len > 0) {
         mem.copy(u8, new_mem, old_mem);
     }
 
-    free(old_mem);
     return new_mem;
 }
 

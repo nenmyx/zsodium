@@ -39,15 +39,15 @@ test "lock/unlock allocated memory" {
     const am = try mem.alloc(u16, 16);
     defer mem.free(am);
 
-    try mem.lock(u16, am);
-    try mem.unlock(u16, am);
+    try mem.lock(am);
+    try mem.unlock(am);
 }
 
 test "lock/unlock pre-allocated memory" {
     var am = [_]u8{ 1, 1, 2, 3, 5, 8 };
 
-    try mem.lock(u8, am[0..]);
-    try mem.unlock(u8, am[0..]);
+    try mem.lock(am[0..]);
+    try mem.unlock(am[0..]);
 }
 
 test "constant time comparison of same types" {
@@ -84,7 +84,7 @@ test "zero allocated memory" {
     const m = try mem.alloc(u32, 8);
     const z = try mem.alloc(u32, 8);
     memset(u32, z, 0);
-    mem.zero(u32, m);
+    mem.zero(m);
 
     assert(m[0] == 0);
 }
@@ -92,7 +92,7 @@ test "zero allocated memory" {
 test "zero pre-allocated memory" {
     var m = [_]u16{ 1, 1, 2, 3, 5, 8 };
     var z = [_]u16{ 0, 0, 0, 0, 0, 0 };
-    mem.zero(u16, m[0..]);
+    mem.zero(m[0..]);
 
     assert(mem.eql(u16, m[0..], z[0..]));
 }
@@ -107,4 +107,45 @@ test "allocator used as an allocator" {
 
     mem.sodium_allocator.free(data);
     f.close();
+}
+
+test "allocator realloc larger" {
+    var am = try mem.sodium_allocator.alloc(u8, 4);
+    defer mem.sodium_allocator.free(am);
+    am[0] = 0xDE;
+    am[1] = 0xAD;
+    am[2] = 0xBE;
+    am[3] = 0xEF;
+
+    am = try mem.sodium_allocator.realloc(am, 8);
+    assert(am[3] == 0xEF);
+}
+
+test "allocator realloc smaller" {
+    var am = try mem.sodium_allocator.alloc(u8, 4);
+    defer mem.sodium_allocator.free(am);
+    am[0] = 0xDE;
+    am[1] = 0xAD;
+    am[2] = 0xBE;
+    am[3] = 0xEF;
+
+    am = try mem.sodium_allocator.realloc(am, 2);
+    assert(am[1] == 0xAD);
+}
+
+// **** ENCODING/DECODING ****
+const enc = zsodium.enc;
+
+test "bin to hex representation" {
+    const am = try mem.alloc(u8, 1);
+    const hex = try enc.toHex(mem.sodium_allocator, u8, am);
+
+    assert(mem.eql(u8, hex, "db"));
+}
+
+test "hex representation to bin" {
+    const hex = "aa";
+    const bin = try enc.fromHex(mem.sodium_allocator, u8, hex, "");
+
+    assert(bin[0] == 0xAA);
 }

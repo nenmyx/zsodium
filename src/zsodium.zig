@@ -17,3 +17,7 @@ pub fn init() !void {
 /// Libsodium memory management, locking, mprotect, and secure allocation and
 /// freeing of memory.
 pub const mem = @import("zsodium/mem.zig");
+
+/// Libsodium encoding and decoding functions, for hexadecimal and base64
+/// encoding methods.
+pub const enc = @import("zsodium/enc.zig");

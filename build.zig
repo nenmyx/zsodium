@@ -12,7 +12,6 @@ const FILE = "../build/" ++ NAME ++ "." ++ VERSION ++ ".tar.gz";
 const SUBCMD = "cd src/ && tar --exclude=\".*\" -cvf" ++ FILE ++ " *";
 
 pub fn build(b: *Builder) void {
-    const src = fs.cwd().openDirTraverse("src") catch @panic("cannot load folder");
     const mode = b.standardReleaseOptions();
 
     // "Build" using system commands, by bundling the source files
@@ -21,7 +20,7 @@ pub fn build(b: *Builder) void {
     const cmd_step = b.addSystemCommand(COMMAND[0..]);
 
     // We don't want a shared or static object for a Zig library.
-    // Kind of annoying everything is "build from source" nowadays,
+    // Kind of annoying that everything is "build from source" nowadays,
     // but it's what we're stuck with right now.
 
     //const lib = b.addStaticLibrary("zsodium", "src/zsodium.zig");

@@ -122,7 +122,7 @@ fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize
     const new_mem = alloc(u8, new_size) catch @panic("unable to allocate memory using sodium_malloc");
 
     // Initialize the new memory
-    mem.set(u8, new_mem, 0);
+    zero(u8, new_mem);
     if (old_mem.len == 0) {
         return new_mem;
     }

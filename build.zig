@@ -16,6 +16,7 @@ pub fn build(b: *Builder) void {
 
     // "Build" using system commands, by bundling the source files
     // into a tar volume for distribution.
+    // TODO: Don't tie so close to bash or linux.
     const COMMAND = [_][]const u8{ "bash", "-c", SUBCMD };
     const cmd_step = b.addSystemCommand(COMMAND[0..]);
 
@@ -40,6 +41,7 @@ pub fn build(b: *Builder) void {
 }
 
 fn add_sodium(obj: *LibExeObjStep) void {
+    // TODO: Don't tie so close to bash or linux.
     obj.addSystemIncludeDir("/usr/include");
     obj.addLibPath("/usr/lib/x86_64-linux-gnu/");
     obj.linkSystemLibrary("sodium");

@@ -1,16 +1,23 @@
 const Builder = @import("std").build.Builder;
 const LibExeObjStep = @import("std").build.LibExeObjStep;
+const fs = @import("std").fs;
 
 const NAME = "zsodium";
-const VERSION = "0.0.0";
-const FILE = "build/" ++ NAME ++ "." ++ VERSION ++ ".tar.gz";
+const VERSION = "0.1.0";
+
+// Enjoy this cursed way to bundle, this is done mostly out of laziness.
+// Since this is in the build script, I'm considerably less careful.
+const FILE = "../build/" ++ NAME ++ "." ++ VERSION ++ ".tar.gz";
+const SUBCMD = "cd src/ && tar --exclude=\".*\" -cvf" ++ FILE ++ " *";
 
 pub fn build(b: *Builder) void {
+    const src = fs.cwd().openDirTraverse("src") catch @panic("cannot load folder");
     const mode = b.standardReleaseOptions();
+
     // "Build" using system commands, by bundling the source files
     // into a tar volume for distribution.
-    const COMMAND = [_][]const u8{ "tar", "--exclude=\".*\"", "-cvf", FILE, "*" };
-    const cmd_step = b.addSystemCommand(COMMAND[0..COMMAND.len]);
+    const COMMAND = [_][]const u8{ "bash", "-c", SUBCMD };
+    const cmd_step = b.addSystemCommand(COMMAND[0..]);
 
     // We don't want a shared or static object for a Zig library.
     // Kind of annoying everything is "build from source" nowadays,

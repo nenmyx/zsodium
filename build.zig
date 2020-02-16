@@ -6,7 +6,8 @@ const NAME = "zsodium";
 const VERSION = "0.1.0";
 
 // Enjoy this cursed way to bundle, this is done mostly out of laziness.
-// Since this is in the build script, I'm considerably less careful.
+// My focus is on proper interaction with libsodium, not the cleanest way
+// to possibly generate a tar volume.
 const FILE = "../build/" ++ NAME ++ "." ++ VERSION ++ ".tar.gz";
 const SUBCMD = "cd src/ && tar --exclude=\".*\" -cvf" ++ FILE ++ " *";
 

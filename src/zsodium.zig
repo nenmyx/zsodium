@@ -3,8 +3,6 @@
 // of cryptographic algorithms and tooling.
 // Libsodium: https://libsodium.org/
 
-// All tests are in this file since otherwise the compiler just ignores imports.
-
 pub const SodiumError = @import("zsodium/util.zig").SodiumError;
 const nacl = @import("zsodium/c.zig");
 

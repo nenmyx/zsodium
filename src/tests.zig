@@ -44,10 +44,13 @@ test "lock/unlock allocated memory" {
 }
 
 test "lock/unlock pre-allocated memory" {
+    // Not sure this should be solved for but w/e, here we are.
     var am = [_]u8{ 1, 1, 2, 3, 5, 8 };
 
-    try mem.lock(am[0..]);
-    try mem.unlock(am[0..]);
+    // Arrays can't be passed in due to the belief it's a guaranteed const.
+    // Instead, a pointer to an array should due fine.
+    try mem.lock(&am);
+    try mem.unlock(&am);
 }
 
 test "constant time comparison of same types" {

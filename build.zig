@@ -24,6 +24,8 @@ pub fn build(b: *Builder) void {
     // Kind of annoying that everything is "build from source" nowadays,
     // but it's what we're stuck with right now.
 
+    // TODO: Revisit is a static or shared library can be imported in an
+    // actual Zig style, instead of just being ran back through a cImport.
     //const lib = b.addStaticLibrary("zsodium", "src/zsodium.zig");
     //lib.setBuildMode(mode);
     //add_sodium(lib);

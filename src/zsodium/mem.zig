@@ -54,68 +54,68 @@ pub fn allocArray(comptime T: type, len: usize) ![]T {
 /// if there is evidence of tampering, and the memory will be zero passed before
 /// being freed.
 pub fn free(buf: var) void {
-    // Check ourselves since we want to let anything in.
-    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
-    nacl.sodium_free(@as(*c_void, buf.ptr));
+    assertPtr(buf);
+    nacl.sodium_free(getPtr(buf));
 }
 
 /// Zeroes the given memory.
 pub fn zero(buf: var) void {
-    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
-    const bytes = @sliceToBytes(buf);
-
-    nacl.sodium_memzero(bytes.ptr, bytes.len);
+    assertPtr(buf);
+    const bufsize = gatherSize(buf);
+    nacl.sodium_memzero(getPtr(buf), bufsize);
 }
 
 /// Checks that the given memory is all zeroed.
 pub fn isZero(buf: var) bool {
-    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
-    const bytes = @sliceToBytes(buf);
-
-    return nacl.sodium_is_zero(bytes.ptr, bytes.len) == 1;
+    assertPtr(buf);
+    const bufsize = gatherSize(buf);
+    return nacl.sodium_is_zero(getConstPtr(buf), bufsize) == 1;
 }
 
 /// Locks the specified region of memory to avoid it being moved to swap.
 /// Used to ensure critical memory (like cryptographic keys) can remain
 /// in memory and not ever sent to a more persistent storage medium.
 pub fn lock(buf: var) !void {
-    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
-    const bytes = @sliceToBytes(buf);
+    assertPtr(buf);
+    const bufsize = gatherSize(buf);
 
     // TODO: Error based on errno, instead of something generic.
-    if (nacl.sodium_mlock(bytes.ptr, bytes.len) != 0)
+    if (nacl.sodium_mlock(getPtr(buf), bufsize) != 0)
         return SodiumError.LockError;
 }
 
 /// Unlocks the specified region of memory, to tell the kernel it can be
 /// sent to swap safely.
 pub fn unlock(buf: var) !void {
-    comptime assert(@typeId(@TypeOf(buf)) == TypeId.Pointer);
-    const bytes = @sliceToBytes(buf);
+    assertPtr(buf);
+    const bufsize = gatherSize(buf);
 
     // TODO: Error based on errno, instead of something generic.
-    if (nacl.sodium_munlock(bytes.ptr, bytes.len) != 0)
+    if (nacl.sodium_munlock(getPtr(buf), bufsize) != 0)
         return SodiumError.LockError;
 }
 
 /// Ease of use function to use mprotect() to specify to the kernel that
 /// the given region of memory should not be able to be read from or written to.
 pub fn noAccess(buf: var) !void {
-    if (nacl.sodium_mprotect_noaccess(@as(*c_void, buf)) != 0)
+    assertPtr(buf);
+    if (nacl.sodium_mprotect_noaccess(getConstPtr(buf)) != 0)
         return SodiumError.MProtectError;
 }
 
 /// Ease of use function to use mprotect() to specify to the kernel that
 /// the given region of memory is read only.
 pub fn readOnly(buf: var) !void {
-    if (nacl.sodium_mprotect_readonly(@as(*c_void, buf)) != 0)
+    assertPtr(buf);
+    if (nacl.sodium_mprotect_readonly(getConstPtr(buf)) != 0)
         return SodiumError.MProtectError;
 }
 
 /// Ease of use function to use mprotect() to specify to the kernel that
 /// the given region of memory should be open for reading and writing.
 pub fn readWrite(buf: var) !void {
-    if (nacl.sodium_mprotect_readwrite(@as(*c_void, buf)) != 0)
+    assertPtr(buf);
+    if (nacl.sodium_mprotect_readwrite(getConstPtr(buf)) != 0)
         return SodiumError.MProtectError;
 }
 
@@ -170,3 +170,31 @@ pub const sodium_allocator = &Allocator{
     .reallocFn = realloc,
     .shrinkFn = shrink,
 };
+
+// Functions mean't to help enforce typing as much as we realistically can,
+// for the functions that accept everything and the kitchen sink.
+
+inline fn assertPtr(val: var) void {
+    comptime assert(@typeId(@TypeOf(val)) == TypeId.Pointer);
+}
+
+inline fn gatherSize(val: var) usize {
+    // TODO: Figure out if erroring is a better solution.
+    if (val.len < 1)
+        return 0;
+
+    return @sizeOf(@TypeOf(val[0])) * val.len;
+}
+
+// We slice everything here to ensure we can @sliceToBytes in case we're sent
+// something that is not a slice. Is all of this overkill? Possibly.
+
+inline fn getPtr(val: var) [*c]u8 {
+    var slice = val[0..];
+    return @as([*c]u8, @sliceToBytes(slice).ptr);
+}
+
+inline fn getConstPtr(val: var) [*c]const u8 {
+    const slice = val[0..];
+    return @as([*c]const u8, @sliceToBytes(slice).ptr);
+}

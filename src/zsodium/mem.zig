@@ -147,9 +147,6 @@ fn realloc(allocator: *Allocator, old_mem: []u8, old_align: u29, new_size: usize
     // TODO: See if realigning to the page is necessary, since libsodium will always use the
     // end of the page anyway.
     const new_mem = alloc(u8, new_size) catch return Allocator.Error.OutOfMemory;
-
-    // TODO: Figure out where the 0xAA bytes are coming from, they seem
-    // to occur after this function, as zeroing out the bytes does nothing.
     zero(new_mem);
 
     // Short circuit in event of null pointer.

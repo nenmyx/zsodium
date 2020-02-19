@@ -21,3 +21,7 @@ pub const mem = @import("zsodium/mem.zig");
 /// Libsodium encoding and decoding functions, for hexadecimal and base64
 /// encoding methods.
 pub const enc = @import("zsodium/enc.zig");
+
+/// Libsodium math functions for handling large numbers represented as
+/// slices of bytes.
+pub const math = @import("zsodium/math.zig");

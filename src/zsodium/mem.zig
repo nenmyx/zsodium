@@ -1,6 +1,5 @@
 // Memory management exposed by libsodium.
 
-const TypeId = @import("builtin").TypeId;
 const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
@@ -8,8 +7,9 @@ const assert = std.debug.assert;
 const math = std.math;
 const os = std.os;
 
-const SodiumError = @import("util.zig").SodiumError;
 const nacl = @import("c.zig");
+
+usingnamespace @import("util.zig");
 
 /// Allocates a chunk of memory at the end of a page boundary, and initialized
 /// with 0xDB. Asserts that the data allocated is properly aligned for the given
@@ -122,8 +122,14 @@ pub fn readWrite(buf: var) !void {
 // TODO: Figure out a robust way to infer types.
 
 /// Constant time memory comparison, only checks for equality.
-pub fn eql(comptime T: type, mema: []const T, memb: []const T) bool {
-    return nacl.sodium_memcmp(mema.ptr, memb.ptr, math.min(mema.len, memb.len)) == 0;
+pub fn eql(mema: var, memb: var) bool {
+    assertPtr(mema);
+    assertPtr(memb);
+
+    const as = gatherSize(mema);
+    const bs = gatherSize(memb);
+
+    return nacl.sodium_memcmp(getConstPtr(mema), getConstPtr(memb), math.min(as, bs)) == 0;
 }
 
 // Below is the allocation functions for sodium_allocator, as well as sodium_allocator
@@ -170,31 +176,3 @@ pub const sodium_allocator = &Allocator{
     .reallocFn = realloc,
     .shrinkFn = shrink,
 };
-
-// Functions mean't to help enforce typing as much as we realistically can,
-// for the functions that accept everything and the kitchen sink.
-
-inline fn assertPtr(val: var) void {
-    comptime assert(@typeId(@TypeOf(val)) == TypeId.Pointer);
-}
-
-inline fn gatherSize(val: var) usize {
-    // TODO: Figure out if erroring is a better solution.
-    if (val.len < 1)
-        return 0;
-
-    return @sizeOf(@TypeOf(val[0])) * val.len;
-}
-
-// We slice everything here to ensure we can @sliceToBytes in case we're sent
-// something that is not a slice. Is all of this overkill? Possibly.
-
-inline fn getPtr(val: var) [*c]u8 {
-    var slice = val[0..];
-    return @as([*c]u8, @sliceToBytes(slice).ptr);
-}
-
-inline fn getConstPtr(val: var) [*c]const u8 {
-    const slice = val[0..];
-    return @as([*c]const u8, @sliceToBytes(slice).ptr);
-}

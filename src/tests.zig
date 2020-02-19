@@ -47,8 +47,9 @@ test "lock/unlock pre-allocated memory" {
     // Not sure this should be solved for but w/e, here we are.
     var am = [_]u8{ 1, 1, 2, 3, 5, 8 };
 
-    // Arrays can't be passed in due to the belief it's a guaranteed const.
-    // Instead, a pointer to an array should due fine.
+    // Array constants need to be sliced before sending in since
+    // even though libsodium claims locking needs a const pointer,
+    // it needs a mutable pointer. So here we are.
     try mem.lock(&am);
     try mem.unlock(&am);
 }
@@ -57,22 +58,21 @@ test "constant time comparison of same types" {
     const am = try mem.alloc(u8, 32);
     const bm = try mem.alloc(u8, 24);
 
-    assert(mem.eql(u8, am, bm));
+    assert(mem.eql(am, bm));
 }
 
 test "constant time comparison of different types" {
     const am = try mem.alloc(u8, 32);
     const bm = try mem.alloc(u16, 12);
 
-    // Kinda dumb but casting down is always the safer bet.
-    assert(mem.eql(u8, am, @sliceToBytes(bm)));
+    assert(mem.eql(am, bm));
 }
 
 test "constant time comparison of higher alignment types" {
     const am = try mem.alloc(u64, 24);
     const bm = try mem.alloc(u64, 32);
 
-    assert(mem.eql(u64, am, bm));
+    assert(mem.eql(am, bm));
 }
 
 test "contant time comparison not equal" {
@@ -80,7 +80,7 @@ test "contant time comparison not equal" {
     const bm = try mem.alloc(u64, 1);
     am[0] = 0x00;
 
-    assert(!mem.eql(u64, am, bm));
+    assert(!mem.eql(am, bm));
 }
 
 test "zero allocated memory" {
@@ -95,9 +95,9 @@ test "zero allocated memory" {
 test "zero pre-allocated memory" {
     var m = [_]u16{ 1, 1, 2, 3, 5, 8 };
     var z = [_]u16{ 0, 0, 0, 0, 0, 0 };
-    mem.zero(m[0..]);
+    mem.zero(&m);
 
-    assert(mem.eql(u16, m[0..], z[0..]));
+    assert(mem.eql(m, z));
 }
 
 test "memory is zero" {
@@ -116,7 +116,7 @@ test "allocator used as an allocator" {
 
     const data = try fstream.readAllAlloc(mem.sodium_allocator, 16);
     const correct = "hello!";
-    assert(mem.eql(u8, data, correct[0..]));
+    assert(mem.eql(data, correct));
 
     mem.sodium_allocator.free(data);
     f.close();
@@ -151,40 +151,50 @@ const enc = zsodium.enc;
 
 test "bin to/from hex u8" {
     const am = [_]u8{ 1, 3, 3, 7 };
-    const hex = try enc.toHex(mem.sodium_allocator, u8, am[0..]);
-    assert(mem.eql(u8, hex, "01030307"));
+    const hex = try enc.toHex(mem.sodium_allocator, am);
+    assert(mem.eql(hex, "01030307"));
 
     const rev = try enc.fromHex(mem.sodium_allocator, u8, hex, "");
-    assert(mem.eql(u8, rev, am[0..]));
+    assert(mem.eql(rev, am));
 }
 
 test "bin to/from hex u16" {
     const am = [_]u16{ 1, 3, 3, 7 };
-    const hex = try enc.toHex(mem.sodium_allocator, u16, am[0..]);
+    const hex = try enc.toHex(mem.sodium_allocator, am);
     // Just don't run the tests on a big-endian architecture, it's fine.
     // TODO: Check for endianness and check accordingly.
-    assert(mem.eql(u8, hex, "0100030003000700"));
+    assert(mem.eql(hex, "0100030003000700"));
 
     const rev = try enc.fromHex(mem.sodium_allocator, u16, hex, "");
-    assert(mem.eql(u16, rev, am[0..]));
+    assert(mem.eql(rev, am));
+}
+
+test "bin from hex with ignore" {
+    const hex = "AABB:CCDD";
+    const ignore = ":";
+
+    const bin = try enc.fromHex(mem.sodium_allocator, u8, hex, ignore);
+
+    const correct = [_]u8{ 0xAA, 0xBB, 0xCC, 0xDD };
+    assert(mem.eql(bin, correct));
 }
 
 test "bin to/from base64 original variant" {
     const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
     const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.Original);
-    assert(mem.eql(u8, b64, "qgC7AMwA3QA="));
+    assert(mem.eql(b64, "qgC7AMwA3QA="));
 
     const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.Original);
-    assert(mem.eql(u16, am[0..], rev));
+    assert(mem.eql(am, rev));
 }
 
 test "bin to/from base64 original padless variant" {
     const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
     const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.OriginalNoPadding);
-    assert(mem.eql(u8, b64, "qgC7AMwA3QA"));
+    assert(mem.eql(b64, "qgC7AMwA3QA"));
 
     const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.OriginalNoPadding);
-    assert(mem.eql(u16, am[0..], rev));
+    assert(mem.eql(am, rev));
 }
 
 // TODO: Fix the following test data to actually require url safe characters.
@@ -192,17 +202,17 @@ test "bin to/from base64 original padless variant" {
 test "bin to/from base64 url safe variant" {
     const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
     const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.UrlSafe);
-    assert(mem.eql(u8, b64, "qgC7AMwA3QA="));
+    assert(mem.eql(b64, "qgC7AMwA3QA="));
 
     const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.UrlSafe);
-    assert(mem.eql(u16, am[0..], rev));
+    assert(mem.eql(am, rev));
 }
 
 test "bin to/from base64 url safe padless variant" {
     const am = [_]u16{ 0xAA, 0xBB, 0xCC, 0xDD };
     const b64 = try enc.toBase64(mem.sodium_allocator, u16, am[0..], enc.Base64Variant.UrlSafeNoPadding);
-    assert(mem.eql(u8, b64, "qgC7AMwA3QA"));
+    assert(mem.eql(b64, "qgC7AMwA3QA"));
 
     const rev = try enc.fromBase64(mem.sodium_allocator, u16, b64, enc.Base64Variant.UrlSafeNoPadding);
-    assert(mem.eql(u16, am[0..], rev));
+    assert(mem.eql(am, rev));
 }

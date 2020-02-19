@@ -1,23 +1,24 @@
 const nacl = @import("c.zig");
-const SodiumError = @import("util.zig").SodiumError;
 const Allocator = @import("std").mem.Allocator;
 
-// TODO: Remove comptime types in "to" functions.
+usingnamespace @import("util.zig");
 
 // Hexadecimal encoding
-pub fn toHex(a: *Allocator, comptime T: type, bin: []const T) ![]u8 {
-    const binBytes = @sliceToBytes(bin);
-    var hex = try a.alloc(u8, binBytes.len * 2 + 1);
+pub fn toHex(a: *Allocator, bin: var) ![]u8 {
+    assertPtr(bin);
+
+    var size = gatherSize(bin);
+    var hex = try a.alloc(u8, size * 2 + 1);
     // This function returns a pointer we already have, discard the return.
-    _ = nacl.sodium_bin2hex(hex.ptr, hex.len, binBytes.ptr, binBytes.len);
+    _ = nacl.sodium_bin2hex(hex.ptr, hex.len, getConstPtr(bin), size);
 
     return hex;
 }
 
-pub fn fromHex(a: *Allocator, comptime T: type, hex: []const u8, ignore: []const u8) ![]T {
+pub fn fromHex(a: *Allocator, comptime T: type, hex: []const u8, ignore: [*:0]const u8) ![]T {
     var bin = try a.alloc(T, hex.len / 2);
     // This function returns a pointer we already have, discard the return.
-    _ = nacl.sodium_hex2bin(@sliceToBytes(bin).ptr, @sizeOf(T) * bin.len, hex.ptr, hex.len, null, null, null);
+    _ = nacl.sodium_hex2bin(@sliceToBytes(bin).ptr, @sizeOf(T) * bin.len, hex.ptr, hex.len, ignore, null, null);
 
     return bin;
 }
@@ -29,9 +30,11 @@ pub const Base64Variant = enum(c_int) {
 };
 
 pub fn toBase64(a: *Allocator, comptime T: type, bin: []const T, variant: Base64Variant) ![]u8 {
-    const bytes = @sliceToBytes(bin);
-    const b64 = try a.alloc(u8, nacl.sodium_base64_encoded_len(bytes.len, @enumToInt(variant)));
-    _ = nacl.sodium_bin2base64(b64.ptr, b64.len, bytes.ptr, bytes.len, @enumToInt(variant));
+    assertPtr(bin);
+
+    const size = gatherSize(bin);
+    const b64 = try a.alloc(u8, nacl.sodium_base64_encoded_len(size, @enumToInt(variant)));
+    _ = nacl.sodium_bin2base64(b64.ptr, b64.len, getConstPtr(bin), size, @enumToInt(variant));
 
     return b64;
 }

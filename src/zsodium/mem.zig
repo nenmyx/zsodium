@@ -119,10 +119,12 @@ pub fn readWrite(buf: var) !void {
         return SodiumError.MProtectError;
 }
 
-// TODO: Figure out a robust way to infer types.
-
 /// Constant time memory comparison, only checks for equality.
 pub fn eql(mema: var, memb: var) bool {
+    // Ensure both arguments are valid to be compared. As
+    // this allows up to more readily compare the bytes of
+    // different types of data, this is a memory comparison
+    // after all, not a "value" comparison strictly.
     assertPtr(mema);
     assertPtr(memb);
 

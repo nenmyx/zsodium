@@ -134,6 +134,11 @@ pub fn eql(mema: var, memb: var) bool {
     return nacl.sodium_memcmp(getConstPtr(mema), getConstPtr(memb), math.min(as, bs)) == 0;
 }
 
+/// Clear a certain amount of bytes off the stack.
+pub fn stackZero(len: usize) void {
+    nacl.sodium_stackzero(len);
+}
+
 // Below is the allocation functions for sodium_allocator, as well as sodium_allocator
 // itself. These are not intended to be used in any other context.
 

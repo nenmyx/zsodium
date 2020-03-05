@@ -6,7 +6,7 @@
 pub const SodiumError = @import("zsodium/util.zig").SodiumError;
 const nacl = @import("zsodium/c.zig");
 
-/// Initializes libsodium for use within the application, if initialization failes,
+/// Initializes libsodium for use within the application, if initialization fails,
 /// A catchable error is returned. When initialization fails an application that
 /// requires use of libsodium should panic, or exit gracefully, up to you.
 pub fn init() !void {
